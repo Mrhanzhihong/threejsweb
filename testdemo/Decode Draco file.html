@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Codelab - Decode</title>
+    <script src="./three.js"></script>
+</head>
+<body>
+   <script>
+       function decodeMesh(byteArray) {
+           //Creat the Draco decoder
+           let dracoDecoderType = {};
+           const dracoModule = DracoDecoderModule(dracoDecoderType);
+           const decoder = new dracoModule.WebIDLWraaper();
+           //Create a buffer to hold the encoded data.
+           const buffer = new  dracoModule.DecoderBuffer();
+           buffer.Init(byteArray,byteArray.length);
+
+           //Decode the encoded geometry.
+           let outputGeometry = decoder.DecodeBufferToMesh(buffer);
+
+           alert('Num points = '+ outputGeometry.num_points());
+           // You must explicitly delete objects created from the DracoModule
+           // or Decoder.
+           dracoModule.destroy(outputGeometry);
+           dracoModule.destroy(decoder);
+           dracoModule.destroy(buffer);
+
+       }
+
+       //Download and decode the Draco encoded geometry.
+        function downloadEndeMesh(filename) {
+           //Download the encoded file
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET",filename,true);
+            xhr.responseType = "arraybuffer";
+
+            xhr.onload = function (event) {
+                const arrayBuffer = xhr.response;
+                if (arrayBuffer){
+                    const byteArray =new Uint8Array(arrayBuffer);
+                    decodeMesh(byteArray);
+                }
+            };
+           xhr.send(null)
+        }
+   downloadEndeMesh('bunny.drc');
+   </script>
+
+</body>
+</html>

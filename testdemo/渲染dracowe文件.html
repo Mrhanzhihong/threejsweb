@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>渲染draco文件</title>
+</head>
+<script src ="./three.min.js"> </script>
+<script src =" ./DRACOLoader.js"> </script>
+<script src ="./draco_decoder.js"> </script>
+
+//Add three.js rendering code.
+<script>
+   'use strict';
+   let camera,cameraTarget,scene,renderer;
+
+   function threejsInit() {
+       let container = document.createElement('div');
+       document.body.appendChild(container);
+
+       camera = new THREE.PerspectiveCamera(35,window.innerWidth/window.innerHeight,1,15);
+       camera.position.set(3,0.15,3);
+       cameraTarget = new THREE.Vector3(0,0,0);
+
+       scene= new THREE.Scene();
+       scene.fog = new  THREE.Fog(0x72645b, 2, 15);
+
+       //ground
+       const plane =new THREE.Mesh(
+           new THREE.PlaneBufferGeometry(40,40),
+           new THREE.MeshPhongMaterial({color: 0x999999, specular: 0x101010}));
+       plane.rotation.x = -Math.PI/2;
+       plane.rotation.y = 0.5;
+       scene.add(plane);
+       plane.receiveShadow =true;
+
+       //lights
+       scene.add(new  THREE.HemisphereLight(0x443333,0x1111122));
+       addShadowedLight(1,1,1,0xffffff,1.35);
+       addShadowedLight(0.5,1,-1,0xffaa00,1);
+
+       //renderer
+       renderer = new THREE.WebGLRenderer({antialias:true});//antialias:是否开启反锯齿，设置为true开启反锯齿。
+       renderer.setClearColor(scene.fog.color);
+       renderer.setPixelRatio(window.devicePixelRatio);
+       renderer.setSize(window.innerWidth,window.innerHeight);
+       container.appendChild(renderer.domElement);
+       window.addEventListener('resize',onWindowResize,false); // 添加window 的resize事件监听
+
+   }
+
+   function addShadowedLight(x,y,z,color,intensity) {
+       const directionalLight = new THREE.DirectionalLight(color,intensity);
+       directionalLight.position.set(x,y,z);
+       scene.add(directionalLight);
+   }
+
+   function resizeGeometry(bufferGeometry,material) {
+       let geometry;
+       //Point cloud does not have face indices.
+       if (bufferGeometry.index==null){
+           geometry = new THREE.Points(bufferGeometry,material);
+       }
+       else {
+           bufferGeometry.computeVertexNormals();
+           geometry = new THREE.Mesh(bufferGeometry,material);
+       }
+
+       //计算几何坐标的范围以进行正确的渲染
+       bufferGeometry.computeBoundingBox();
+       const sizex = bufferGeometry.boundingBox.max.x - bufferGeometry.boundingBox.min.x;
+       const sizey = bufferGeometry.boundingBox.max.y - bufferGeometry.boundingBox.min.y;
+       const sizez = bufferGeometry.boundingBox.max.z - bufferGeometry.boundingBox.min.z;
+
+       const  diagonalSize = Math.sqrt(sizex*sizex+sizey*sizey+sizez*sizez);
+       const scale = 1.0/ diagonalSize;
+       const midx = (bufferGeometry.boundingBox.min.x + bufferGeometry.boundingBox.max.x)/2;
+       const midy = (bufferGeometry.boundingBox.min.y + bufferGeometry.boundingBox.max.y)/2;
+       const midz = (bufferGeometry.boundingBox.min.z + bufferGeometry.boundingBox.max.z)/2;
+
+       geometry.scale.multiplyScalar(scale);
+       geometry.position.x = -midx * scale;
+       geometry.position.y = -midy * scale;
+       geometry.position.z = -midz * scale;
+       geometry.castShadow = true;
+       geometry.receiveShadow = true;
+       return geometry;
+   }
+
+   function onWindowResize() {
+       camera.aspect = window.innerWidth / window.innerHeight;
+       camera.updateProjectionMatrix();
+       renderer.setSize(window.innerWidth,window.innerHeight);
+   }
+
+   function threejsAnimate() {
+       requestAnimationFrame(threejsAnimate);
+       render();
+
+   }
+   function render() {
+        const timer = Date.now()*0.0005;
+        camera.position.x = Math.sin(timer)*2.5;
+        camera.position.z = Math.sin(timer)*2.5;
+        camera.lookAt(cameraTarget);
+        renderer.render(scene,camera);
+   }
+
+   //添加Draco解码代码。
+
+   //全局Draco解码器类型。
+   let dracoDecoderType = {};
+   let dracoLoader;
+   let currentDecoder;
+
+   function createDracoDecoder() {
+       dracoLoader = new THREE.DRACOLoader();
+       dracoLoader.setDracoDecoderType(dracoDecoderType);
+   }
+
+   //bufferGeometry是由DRACOLoader.js解码的几何体
+   function onDecode(bufferGeometry) {
+       const material = new THREE.MeshStandardMaterial({vertexColors: THREE.VertexColors});
+
+       const geometry = resizeGeometry(bufferGeometry, material);
+
+       const selectedObject = scene.getObjectByName("my_mesh");
+       scene.remove(selectedObject);
+       geometry.name = "my_mesh";
+       scene.add(geometry);
+   }
+   createDracoDecoder();
+
+   //添加代码以加载文件。
+   window.onload = function() {
+       const fileInput = document.getElementById('fileInput');
+       fileInput.onclick = function() {
+           this.value = '';
+       };
+       fileInput.addEventListener('change', function(e) {
+           const file = fileInput.files[0];
+
+           const reader = new FileReader();
+           reader.onload = function(e) {
+               // Enable logging to console output.
+               dracoLoader.setVerbosity(1);
+               dracoLoader.decodeDracoFile(reader.result, onDecode);
+           };
+           reader.readAsArrayBuffer(file);
+       });
+       threejsInit();
+       threejsAnimate();
+   }
+</script>
+
+<body>
+<div id="page-wrapper">
+    <h1>Open a draco compressed file (.drc):</h1>
+    <div>
+        <input type="file" id="fileInput">
+    </div>
+</div>
+</body>
+</html>

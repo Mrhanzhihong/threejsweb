@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>第一个几何模型</title>
+    <style>
+        body{
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+    <script src="./three.js"></script>
+</head>
+<body>
+   <script>
+       var scene = new THREE.Scene();    //dd第一个属性是视野角度（FOV）。
+       // 视野角度就是无论在什么时候，你所能在显示器上看到的场景的范围，它的值是一个角度。
+       var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+       //第二个值是长宽比（aspect ratio）。 也就是你用一个物体的宽除以它的高的比值。
+       // 比如说，当你在一个宽屏电视上播放老电影时，可以看到图像仿佛是被压扁的。
+       var  renderer =new THREE.WebGLRenderer();
+       //接下来是渲染器。这里是施展魔法的地方。除了我们在这里用到的WebGLRenderer渲染器之外，
+       // Three.js同时提供了其他几种渲染器，当用户所使用的浏览器过于老旧，或者由于其他原因不支持WebGL时，
+       // 可以使用这几种渲染器进行降级
+       renderer.setSize(window.innerWidth/2,window.innerHeight/2,false);
+       //除了创建一个渲染器的实例之外，我们还需要在我们的应用程序里设置一个渲染器的大小尺寸。
+       document.body.appendChild(renderer.domElement);
+       //最后，我们将renderer（渲染器）这个元素添加到我们的HTML文档中，
+       // 这也就是渲染器使用<canvas>元素来将场景展现给我们。
+
+
+
+       var geometry = new THREE.BoxGeometry(5,5,5);
+       var material = new THREE.MeshBasicMaterial({color:0x00ff00 });
+       var cube = new THREE.Mesh(geometry,material);
+       scene.add(cube);
+
+       camera.position.z = 10;
+
+       //，如果你已经从上面复制了我们已经写好的代码到HTML文件中，你将不会在其中看到任何东西。
+       // 这是因为我们还没有对它进行真正的渲染。为此，我们需要调用一个被叫做“渲染”或者“动画循环”的东西
+       function f() {
+           requestAnimationFrame(f);
+           cube.rotation.x += 0.1;
+           cube.rotation.y += 0.01;
+           cube.rotation.z += 0.1;
+           renderer.render(scene,camera);
+       }
+       f();   //动画循环函数里，
+          </script>
+</body>
+</html>
